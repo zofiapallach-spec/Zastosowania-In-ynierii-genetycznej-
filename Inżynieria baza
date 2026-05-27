@@ -1,0 +1,1455 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inżynieria Genetyczna – Baza Egzaminacyjna</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap');
+
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --accent: #00e5a0;
+    --accent2: #3b82f6;
+    --accent3: #f59e0b;
+    --danger: #ef4444;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --border: #1e293b;
+    --correct: #10b981;
+    --incorrect: #ef4444;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Syne', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,160,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,160,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: relative;
+    z-index: 10;
+    padding: 24px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    background: rgba(10,14,26,0.9);
+    backdrop-filter: blur(12px);
+    position: sticky;
+    top: 0;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+
+  .logo-text { font-size: 13px; font-family: 'Space Mono', monospace; color: var(--muted); }
+  .logo-text strong { display: block; color: var(--text); font-size: 15px; }
+
+  .header-stats {
+    display: flex; gap: 24px; align-items: center;
+  }
+
+  .stat-chip {
+    display: flex; align-items: center; gap: 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .stat-chip span { color: var(--accent); font-weight: 700; font-size: 16px; }
+
+  /* ── MAIN LAYOUT ── */
+  .app {
+    position: relative; z-index: 1;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 32px 24px;
+  }
+
+  /* ── MODE SELECTOR ── */
+  .mode-selector {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+
+  .mode-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+  }
+
+  .mode-btn:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .mode-btn.active {
+    border-color: var(--accent);
+    background: rgba(0,229,160,0.08);
+    box-shadow: 0 0 20px rgba(0,229,160,0.1);
+  }
+
+  .mode-btn .mode-icon { font-size: 24px; margin-bottom: 8px; }
+  .mode-btn .mode-name { font-weight: 700; font-size: 14px; }
+  .mode-btn .mode-desc { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  /* ── FILTER BAR ── */
+  .filter-bar {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    margin-bottom: 24px;
+    align-items: center;
+  }
+
+  .filter-label { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); margin-right: 4px; }
+
+  .tag {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--surface);
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+
+  .tag:hover { border-color: var(--accent2); color: var(--accent2); }
+  .tag.active { background: var(--accent2); border-color: var(--accent2); color: white; }
+
+  /* ── FLASHCARD MODE ── */
+  .flashcard-container {
+    perspective: 1200px;
+    margin-bottom: 24px;
+  }
+
+  .flashcard {
+    width: 100%;
+    min-height: 320px;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+  }
+
+  .flashcard.flipped { transform: rotateY(180deg); }
+
+  .card-face {
+    position: absolute; inset: 0;
+    backface-visibility: hidden;
+    border-radius: 16px;
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 320px;
+  }
+
+  .card-front {
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+
+  .card-back {
+    background: linear-gradient(135deg, rgba(0,229,160,0.05), rgba(59,130,246,0.05));
+    border: 1px solid var(--accent);
+    transform: rotateY(180deg);
+  }
+
+  .card-number {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    margin-bottom: 16px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .card-question {
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.5;
+    margin-bottom: 16px;
+  }
+
+  .card-hint {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-answer-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+
+  .card-answer {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 16px;
+    line-height: 1.4;
+  }
+
+  .card-explanation {
+    font-size: 13px;
+    color: #94a3b8;
+    line-height: 1.7;
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+
+  .card-explanation::-webkit-scrollbar { width: 4px; }
+  .card-explanation::-webkit-scrollbar-track { background: transparent; }
+  .card-explanation::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .card-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-family: 'Space Mono', monospace;
+    border: 1px solid;
+    margin-bottom: 12px;
+  }
+
+  .card-tag.mcq { border-color: var(--accent2); color: var(--accent2); }
+  .card-tag.open { border-color: var(--accent3); color: var(--accent3); }
+
+  /* flashcard nav */
+  .card-nav {
+    display: flex; gap: 12px; justify-content: center; align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .nav-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+
+  .nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .nav-btn:disabled { opacity: 0.3; cursor: default; }
+
+  .progress-text {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    color: var(--muted);
+    min-width: 80px;
+    text-align: center;
+  }
+
+  /* flashcard rating buttons */
+  .rating-btns {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .rating-btn {
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid;
+    cursor: pointer;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    transition: all 0.2s;
+    background: transparent;
+  }
+
+  .rating-btn.easy { border-color: var(--correct); color: var(--correct); }
+  .rating-btn.easy:hover { background: var(--correct); color: #0a0e1a; }
+  .rating-btn.medium { border-color: var(--accent3); color: var(--accent3); }
+  .rating-btn.medium:hover { background: var(--accent3); color: #0a0e1a; }
+  .rating-btn.hard { border-color: var(--incorrect); color: var(--incorrect); }
+  .rating-btn.hard:hover { background: var(--incorrect); color: white; }
+
+  /* ── QUIZ MODE ── */
+  .quiz-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 36px;
+    margin-bottom: 20px;
+    animation: slideIn 0.3s ease;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .quiz-question {
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.5;
+    margin-bottom: 28px;
+  }
+
+  .options-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .option-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+    cursor: pointer;
+    text-align: left;
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .option-btn:hover:not(:disabled) { border-color: var(--accent2); color: var(--accent2); }
+  .option-btn.correct { border-color: var(--correct); background: rgba(16,185,129,0.1); color: var(--correct); }
+  .option-btn.incorrect { border-color: var(--incorrect); background: rgba(239,68,68,0.1); color: var(--incorrect); }
+  .option-btn.revealed { border-color: var(--correct); background: rgba(16,185,129,0.05); color: var(--correct); }
+  .option-btn:disabled { cursor: default; }
+
+  .option-letter {
+    width: 28px; height: 28px; min-width: 28px;
+    border-radius: 6px;
+    border: 1px solid currentColor;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .quiz-explanation {
+    margin-top: 20px;
+    padding: 16px;
+    background: rgba(0,229,160,0.04);
+    border: 1px solid rgba(0,229,160,0.15);
+    border-radius: 10px;
+    font-size: 13px;
+    color: #94a3b8;
+    line-height: 1.7;
+    display: none;
+  }
+
+  .quiz-explanation.show { display: block; animation: fadeIn 0.3s ease; }
+
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .quiz-explanation strong { color: var(--accent); }
+
+  .next-btn {
+    display: none;
+    width: 100%;
+    margin-top: 16px;
+    padding: 14px;
+    background: var(--accent);
+    border: none;
+    border-radius: 10px;
+    color: #0a0e1a;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .next-btn.show { display: block; animation: fadeIn 0.3s ease; }
+  .next-btn:hover { opacity: 0.85; transform: translateY(-1px); }
+
+  /* progress bar */
+  .progress-bar-wrap {
+    background: var(--surface2);
+    border-radius: 4px;
+    height: 4px;
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 4px;
+    transition: width 0.4s ease;
+  }
+
+  /* ── BROWSE MODE ── */
+  .browse-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .browse-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+
+  .browse-item:hover { border-color: var(--muted); }
+
+  .browse-header {
+    padding: 16px 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .browse-q {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.5;
+    flex: 1;
+  }
+
+  .browse-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    min-width: 50px;
+  }
+
+  .browse-toggle {
+    font-size: 18px;
+    color: var(--muted);
+    transition: transform 0.3s;
+    min-width: 24px;
+    text-align: center;
+  }
+
+  .browse-item.open .browse-toggle { transform: rotate(180deg); }
+
+  .browse-body {
+    display: none;
+    padding: 0 20px 20px;
+    border-top: 1px solid var(--border);
+  }
+
+  .browse-item.open .browse-body { display: block; }
+
+  .browse-answer {
+    font-weight: 700;
+    color: var(--accent);
+    font-size: 14px;
+    padding: 12px 0 8px;
+  }
+
+  .browse-explanation {
+    font-size: 13px;
+    color: #94a3b8;
+    line-height: 1.7;
+  }
+
+  /* ── RESULTS ── */
+  .results-screen {
+    text-align: center;
+    padding: 60px 40px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    display: none;
+  }
+
+  .results-screen.show { display: block; animation: slideIn 0.4s ease; }
+
+  .results-score {
+    font-size: 80px;
+    font-weight: 800;
+    line-height: 1;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+  }
+
+  .results-label { font-size: 14px; color: var(--muted); margin-bottom: 32px; }
+
+  .results-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .results-stat {
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 20px;
+  }
+
+  .results-stat .val { font-size: 28px; font-weight: 800; }
+  .results-stat .lbl { font-size: 12px; color: var(--muted); margin-top: 4px; font-family: 'Space Mono', monospace; }
+  .correct-val { color: var(--correct); }
+  .incorrect-val { color: var(--incorrect); }
+  .skipped-val { color: var(--accent3); }
+
+  .restart-btn {
+    padding: 14px 40px;
+    background: var(--accent);
+    border: none;
+    border-radius: 10px;
+    color: #0a0e1a;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .restart-btn:hover { opacity: 0.85; transform: translateY(-2px); }
+
+  /* ── SEARCH ── */
+  .search-wrap {
+    position: relative;
+    margin-bottom: 20px;
+  }
+
+  .search-input {
+    width: 100%;
+    padding: 14px 20px 14px 48px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .search-input:focus { border-color: var(--accent); }
+  .search-input::placeholder { color: var(--muted); }
+
+  .search-icon {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    font-size: 18px;
+  }
+
+  /* ── STUDIED INDICATOR ── */
+  .studied-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--correct);
+    display: inline-block;
+    margin-left: 8px;
+    vertical-align: middle;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .studied-dot.visible { opacity: 1; }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .mode-selector { grid-template-columns: 1fr; }
+    .results-grid { grid-template-columns: 1fr; }
+    .header-stats { display: none; }
+    .card-question { font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🧬</div>
+    <div class="logo-text">
+      <strong>Inżynieria Genetyczna</strong>
+      Interaktywna baza egzaminacyjna
+    </div>
+  </div>
+  <div class="header-stats">
+    <div class="stat-chip">Pytań: <span id="totalCount">72</span></div>
+    <div class="stat-chip">Przerobione: <span id="studiedCount">0</span></div>
+    <div class="stat-chip">Wynik quiz: <span id="quizScore">—</span></div>
+  </div>
+</header>
+
+<div class="app">
+
+  <!-- MODE SELECTOR -->
+  <div class="mode-selector">
+    <button class="mode-btn active" onclick="setMode('flashcard')">
+      <div class="mode-icon">🃏</div>
+      <div class="mode-name">Fiszki</div>
+      <div class="mode-desc">Przeglądaj pytania z odpowiedziami</div>
+    </button>
+    <button class="mode-btn" onclick="setMode('quiz')">
+      <div class="mode-icon">⚡</div>
+      <div class="mode-name">Quiz</div>
+      <div class="mode-desc">Sprawdź wiedzę z wyborem odpowiedzi</div>
+    </button>
+    <button class="mode-btn" onclick="setMode('browse')">
+      <div class="mode-icon">📚</div>
+      <div class="mode-name">Przeglądaj</div>
+      <div class="mode-desc">Wszystkie pytania z wyjaśnieniami</div>
+    </button>
+  </div>
+
+  <!-- FILTER BAR -->
+  <div class="filter-bar">
+    <span class="filter-label">TEMAT:</span>
+    <button class="tag active" onclick="setFilter('all', this)">Wszystkie</button>
+    <button class="tag" onclick="setFilter('transkrypcja', this)">Transkrypcja</button>
+    <button class="tag" onclick="setFilter('translacja', this)">Translacja</button>
+    <button class="tag" onclick="setFilter('restrykcja', this)">Enzymy RM</button>
+    <button class="tag" onclick="setFilter('plazmidy', this)">Plazmidy</button>
+    <button class="tag" onclick="setFilter('wektory', this)">Wektory</button>
+    <button class="tag" onclick="setFilter('metody', this)">Metody</button>
+    <button class="tag" onclick="setFilter('open', this)">Otwarte</button>
+  </div>
+
+  <!-- FLASHCARD MODE -->
+  <div id="flashcardMode">
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" id="flashProgress" style="width:0%"></div>
+    </div>
+
+    <div class="flashcard-container">
+      <div class="flashcard" id="flashcard" onclick="flipCard()">
+        <div class="card-face card-front" id="cardFront">
+          <div class="card-number" id="cardNum">PYTANIE 01 / 72</div>
+          <div id="cardTypeTag" class="card-tag mcq">MCQ</div>
+          <div class="card-question" id="cardQuestion">Ładowanie...</div>
+          <div class="card-hint">👆 Kliknij aby zobaczyć odpowiedź</div>
+        </div>
+        <div class="card-face card-back" id="cardBack">
+          <div class="card-number" id="cardNumBack">PYTANIE 01 / 72</div>
+          <div class="card-answer-label">ODPOWIEDŹ</div>
+          <div class="card-answer" id="cardAnswer"></div>
+          <div class="card-explanation" id="cardExplanation"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-nav">
+      <button class="nav-btn" id="prevBtn" onclick="prevCard()" disabled>← Poprzednie</button>
+      <span class="progress-text" id="progressText">1 / 72</span>
+      <button class="nav-btn" id="nextBtn" onclick="nextCard()">Następne →</button>
+    </div>
+
+    <div class="rating-btns" id="ratingBtns" style="display:none">
+      <button class="rating-btn easy" onclick="rateCard('easy')">✓ Znam</button>
+      <button class="rating-btn medium" onclick="rateCard('medium')">~ Prawie</button>
+      <button class="rating-btn hard" onclick="rateCard('hard')">✗ Nie wiem</button>
+    </div>
+  </div>
+
+  <!-- QUIZ MODE -->
+  <div id="quizMode" style="display:none">
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" id="quizProgress" style="width:0%"></div>
+    </div>
+
+    <div id="quizContainer">
+      <div class="quiz-card" id="quizCard">
+        <div class="card-number" id="quizNum">PYTANIE 1 / 10</div>
+        <div class="quiz-question" id="quizQuestion"></div>
+        <div class="options-grid" id="optionsGrid"></div>
+        <div class="quiz-explanation" id="quizExplanation"></div>
+        <button class="next-btn" id="nextQuizBtn" onclick="nextQuizQuestion()">Następne pytanie →</button>
+      </div>
+    </div>
+
+    <div class="results-screen" id="resultsScreen">
+      <div class="results-score" id="resultsScore">0%</div>
+      <div class="results-label">Wynik quizu</div>
+      <div class="results-grid">
+        <div class="results-stat"><div class="val correct-val" id="correctCount">0</div><div class="lbl">Poprawnych</div></div>
+        <div class="results-stat"><div class="val incorrect-val" id="incorrectCount">0</div><div class="lbl">Błędnych</div></div>
+        <div class="results-stat"><div class="val skipped-val" id="quizTotal">0</div><div class="lbl">Łącznie</div></div>
+      </div>
+      <button class="restart-btn" onclick="startQuiz()">🔄 Nowy quiz</button>
+    </div>
+  </div>
+
+  <!-- BROWSE MODE -->
+  <div id="browseMode" style="display:none">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input class="search-input" type="text" placeholder="Szukaj pytania lub słowa kluczowego..." oninput="filterBrowse(this.value)" id="searchInput">
+    </div>
+    <div class="browse-grid" id="browseGrid"></div>
+  </div>
+
+</div>
+
+<script>
+// ─── DATA ────────────────────────────────────────────────────────────────────
+const questions = [
+  {
+    id:1, type:'mcq', topic:'transkrypcja',
+    q: 'Typowe białka aktywujące inicjację transkrypcji globalnie, oddziałujące z podjednostką alfa (αCTD) polimerazy RNA to m.in.:',
+    a: 'FIS, CAP (CRP), IHF',
+    options: ['FIS, CAP (CRP), IHF', 'LacI, CRP, FIS', 'cAMP, sigma70, NusA', 'UP element, DksA, ppGpp'],
+    correct: 0,
+    exp: 'Podjednostka α polimerazy RNA posiada domenę αCTD wiążącą globalne aktywatory: FIS (aktywuje geny rRNA), CAP/CRP (aktywowany przez cAMP, np. operon lac) i IHF (zagina DNA ułatwiając kontakt aktywatora z polimerazą). LacI to represor, nie aktywator.'
+  },
+  {
+    id:2, type:'mcq', topic:'transkrypcja',
+    q: 'Najistotniejszym białkiem strukturalnym degradosomu jest:',
+    a: 'RNaza E',
+    options: ['RNaza III', 'PNPaza', 'RNaza E', 'PcnB'],
+    correct: 2,
+    exp: 'RNaza E jest endonukleazą stanowiącą scaffold (rusztowanie) degradosomu. Wg prezentacji wykładowej: degradosom = RNazaE + kinaza polifosforanowa (PPK); egzonukleazy: RNazaII (90%), PNPaza (10%); endonukleazy: RNazaE (ss), RNazaIII (ds).'
+  },
+  {
+    id:3, type:'mcq', topic:'translacja',
+    q: 'Wskaż sekwencję Shine-Dalgarno (SD) w przykładzie: 16S rRNA ASD: 3′-AUUCCUCCA-5′; mRNA: 5′-UCGAUAAAGGAUAUAUCAUAUG-3′',
+    a: 'GAGG',
+    options: ['UAAG', 'GAGG', 'GAUC', 'Żadna z podanych'],
+    correct: 1,
+    exp: 'SD na mRNA jest komplementarne do ASD 16S rRNA. GAGG (fragment sekwencji GAGGAG) jest najlepiej dopasowany do ASD i leży we właściwej odległości (~5-10 nt) przed kodonem AUG.'
+  },
+  {
+    id:4, type:'mcq', topic:'plazmidy',
+    q: 'Dotyczące dzikiego typu E. coli:',
+    a: 'Nie jest możliwe klonowanie palindromów DNA >30-40 pz',
+    options: ['Nie jest możliwe klonowanie palindromów DNA >30-40 pz', 'Klonowanie palindromów jest możliwe przy <50 pz', 'Tandemowe powtórzenia nie mogą być klonowane', 'Klonowanie sekwencji AT-bogatych jest niemożliwe'],
+    correct: 0,
+    exp: 'Szczepy E. coli WT mają aktywną rekombinazę RecA i system RecBCD. Palindromy >30-40 pz tworzą struktury hairpin — substraty dla nukleaz → delecje. Wg prezentacji: "nie można sklonować identycznych fragmentów DNA w orientacji głowa-do-głowy powyżej 30 pz".'
+  },
+  {
+    id:5, type:'mcq', topic:'plazmidy',
+    q: 'Defektywny mutant w genie kodującym polimerazę I DNA E. coli (polA1) powoduje:',
+    a: 'Brak replikacji plazmidów z grupy ColE1',
+    options: ['Brak replikacji chromosomu', 'Brak replikacji plazmidów z grupy ColE1', 'Hiperreplikację plazmidów ColE1', 'Brak replikacji plazmidów F'],
+    correct: 1,
+    exp: 'Plazmidy ColE1 (pBR322, pUC) używają RNA II jako startera, który jest wydłużany przez Pol I. Mutacja polA1 inaktywuje Pol I → brak replikacji ColE1. Chromosom replikuje się głównie przez Pol III.'
+  },
+  {
+    id:6, type:'mcq', topic:'plazmidy',
+    q: 'Obniżenie liczby kopii plazmidów ColE1 w mutantach pcnB⁻ należy łączyć:',
+    a: 'Ze zwiększoną stabilnością inhibitora RNA I',
+    options: ['Ze zmniejszoną produkcją białka Rop', 'Z nadprodukcją białka Rop', 'Z obniżeniem poziomu RNA II', 'Ze zwiększoną stabilnością inhibitora RNA I'],
+    correct: 3,
+    exp: 'PcnB (polimeraza poli(A)) poliadenyluje RNA I, destabilizując go. W mutantach pcnB⁻: brak poliadenylowania → RNA I bardziej stabilny → silniejsza inhibicja hybrydu RNAII/DNA → mniej kopii. Prezentacja: "pcnB⁻ 10× ↓ RNA I polimeraza poli(A)".'
+  },
+  {
+    id:7, type:'mcq', topic:'wektory',
+    q: 'Wysokokopijne wektory oparte na ori pUC są wykorzystywane:',
+    a: 'Jako obfite źródło matrycy DNA do transkrypcji in vitro i klonowania',
+    options: ['Jako obfite źródło matrycy DNA do transkrypcji in vitro i klonowania', 'Do ścisłej regulacji transkrypcji genów', 'Do ekspresji genów toksycznych', 'Jako wektory o szerokim zakresie gospodarzy'],
+    correct: 0,
+    exp: 'Wektory pUC mają zmutowane Rop i zmodyfikowane RNA II → 500-700 kopii/komórkę. Idealne do produkcji dużych ilości DNA plazmidowego. Do precyzyjnej kontroli ekspresji stosuje się wektory niskokopijne (pACYC, pSC101).'
+  },
+  {
+    id:8, type:'mcq', topic:'translacja',
+    q: 'Regulacja ekspresji przez "gatunkowo-nietypowe" kodony aminokwasów (np. argininy) wynika z:',
+    a: 'Zróżnicowanej dostępności (stężeniu) niektórych typów tRNA',
+    options: ['Wiązania sigma 70 do sekwencji kodonów', 'Ograniczonej puli aminokwasów w komórce', 'Zróżnicowanej dostępności (stężeniu) niektórych typów tRNA', 'Selektywnej aktywacji rybosomów przez kodony'],
+    correct: 2,
+    exp: 'Zjawisko codon bias: rzadkie kodony (np. AGA, AGG dla Arg w E. coli) odpowiadają tRNA o niskim stężeniu. Gen z wieloma rzadkimi kodonami → pauza rybosomów → niska wydajność translacji. Rozwiązanie: szczepy BL21-CodonPlus, Rosetta, pRare.'
+  },
+  {
+    id:9, type:'mcq', topic:'wektory',
+    q: 'Wektor zawierający dwa niezależne ori — jeden plazmidowy, drugi od bakteriofaga filamentującego:',
+    a: 'Fagmid',
+    options: ['Wektor o szerokim zakresie gospodarzy', 'Kosmid', 'Fagmid', 'Wektor wahadłowy'],
+    correct: 2,
+    exp: 'Fagmid (phagemid) to hybryda plazmidu i faga filamentującego (M13 lub f1). Ori plazmidowe → replikacja jako dsDNA; fagowe ori → przy infekcji fagiem pomocniczym → ssDNA. Klasyczne fagmidy: pBluescript, pUC118/119.'
+  },
+  {
+    id:10, type:'mcq', topic:'translacja',
+    q: 'Który sygnał stopu jest najwydatniejszy u E. coli?',
+    a: 'UAAU',
+    options: ['UAAA', 'UAAU', 'UAAG', 'UAAC'],
+    correct: 1,
+    exp: 'Prezentacja podaje wprost: "Znaki stopu (4 nt) UAAU, UAAG — 60%, 30%, 10%; Efektywność terminacji: 80% vs 7%". UAA + U na pozycji +4 = UAAU → najwyższa wydajność terminacji spośród podanych opcji.'
+  },
+  {
+    id:11, type:'mcq', topic:'restrykcja',
+    q: 'Restrykcja endonukleolityczna DNA w komórce bakteryjnej jest wywołana przez:',
+    a: 'Inny wzór metylacji zasad obcego DNA',
+    options: ['Brak metylacji obcego DNA', 'Inny wzór metylacji zasad obcego DNA', 'Brak homologii sekwencji obcego DNA z chromosomem', 'Zbyt dużą długość cząsteczki obcego DNA'],
+    correct: 1,
+    exp: 'System R-M chroni komórkę przed obcym DNA. Własne DNA jest metylowane → chronione. Obce DNA ma inny wzór metylacji → rozpoznawane i cięte. Prezentacja: "Restrykcja i modyfikacja — metylowany vs niemetylowany DNA".'
+  },
+  {
+    id:12, type:'mcq', topic:'restrykcja',
+    q: 'Typowe enzymy restrykcyjne klasy II wymagają:',
+    a: 'Jonów Mg²⁺',
+    options: ['Jonów Mg²⁺', 'ATP i Mg²⁺', 'SAM i Mg²⁺', 'ATP, SAM i Mg²⁺'],
+    correct: 0,
+    exp: 'Enzymy klasy II wymagają wyłącznie Mg²⁺ jako kofaktora katalitycznego. ATP jest wymagany przez klasy I i III (do translokacji). SAM to kofaktor metylotransferazy w klasach I i II. Klasa II: tylko Mg²⁺, tnie w miejscu rozpoznania.'
+  },
+  {
+    id:13, type:'mcq', topic:'restrykcja',
+    q: 'Pełna definicja izoschizomerów:',
+    a: 'Enzymy rozpoznające tę samą sekwencję i przecinające ją w taki sam sposób',
+    options: ['Enzymy rozpoznające tę samą sekwencję i przecinające ją w taki sam sposób', 'Enzymy tą samą sekwencję, lecz przecinające ją w różny sposób', 'Enzymy z różnych klas rozpoznające tę samą sekwencję', 'Enzymy generujące identyczne lepkie końce, niezależnie od sekwencji'],
+    correct: 0,
+    exp: 'Izoschizomery rozpoznają identyczną sekwencję I tną ją w tym samym miejscu. Opcja B opisuje NEOSCHIZOMERY. Prezentacja: "Neoschizomery rozpoznają tę samą sekwencję DNA lecz przecinają ją w inny sposób. Uniemożliwia to ligację końców".'
+  },
+  {
+    id:14, type:'mcq', topic:'restrykcja',
+    q: 'Aktywność gwiazdkowa (star activity) enzymów restrykcyjnych polega na:',
+    a: 'Zmianie specyficzności rozpoznawania sekwencji cięcia',
+    options: ['Zahamowaniu aktywności enzymu', 'Zmianie cięcia z lepkich na tępe końce', 'Zmianie cięcia z tępych na lepkie końce', 'Zmianie specyficzności rozpoznawania sekwencji cięcia'],
+    correct: 3,
+    exp: 'Star activity = utrata ścisłej specyficzności. Przyczyny wg prezentacji: glicerol >5%, DMSO/etanol, niska siła jonowa, wysokie pH, inne jony niż Mg²⁺, wysokie stężenie enzymu. Efekt: cięcie sekwencji podobnych, ale nie identycznych z kanoniczną.'
+  },
+  {
+    id:15, type:'mcq', topic:'transkrypcja',
+    q: 'Systemy antyterminacji N/nut i Q/qut bakteriofaga lambda różnią się tym, że:',
+    a: 'W N/nut sekwencja antyterminatora leży na RNA, w Q/qut na DNA',
+    options: ['System N/nut działa na terminację Rho-zależną, Q/qut na Rho-niezależną', 'System Q/qut nie wymaga białek Nus', 'W N/nut sekwencja antyterminatora leży na RNA, w Q/qut na DNA', 'System N/nut blokuje tylko terminatory dystalne'],
+    correct: 2,
+    exp: 'N/nut: białko N wiąże sekwencję nut na transkrypcie RNA (in cis). Q/qut: białko Q wiąże sekwencję qut na DNA w pobliżu promotora. Prezentacja: "(in trans) N; (in cis) nut P→nut" + oddzielny slajd Q/qut.'
+  },
+  {
+    id:16, type:'mcq', topic:'translacja',
+    q: 'Odległości SD (obserwowana i "dopasowana") w przykładzie z prezentacji:',
+    a: '8 i 5',
+    options: ['5 i 3', '8 i 5', '10 i 7', '4 i 2'],
+    correct: 1,
+    exp: 'Odległość obserwowana (od ostatniego nt SD do pierwszego A w AUG) = 8 nt. Odległość dopasowana (po optymalnym wyrównaniu SD z ASD) = 5 nt. Prezentacja: "SDref P — 9 obserwowana, 5 dopasowania".'
+  },
+  {
+    id:17, type:'mcq', topic:'translacja',
+    q: 'Asynchronizacja transkrypcji i translacji ma miejsce w przypadku:',
+    a: 'Słabego RBSu i mocnego promotora',
+    options: ['Słabego RBSu i mocnego promotora', 'Mocnego RBSu i słabego promotora', 'Słabego RBSu i słabego promotora', 'Mocnego RBSu i mocnego promotora'],
+    correct: 0,
+    exp: 'Mocny promotor → szybka produkcja mRNA. Słaby RBS → mało rybosomów wiąże mRNA. Skutek: nagromadzenie nieobjętego przez rybosomy mRNA → podatność na degradację. Prezentacja: "Przypadek T7 — desynchronizacja translacji i transkrypcji".'
+  },
+  {
+    id:18, type:'mcq', topic:'translacja',
+    q: 'Pseudogeny/sekwencje przypominające sygnały translacyjne są eliminowane z translacji przez:',
+    a: 'Tworzenie bardzo stabilnych struktur drugorzędowych mRNA w rejonie RBS',
+    options: ['Brak kodonów inicjatorowych AUG w pobliżu', 'Brak wystarczającej liczby zasad komplementarnych do 16S rRNA', 'Tworzenie bardzo stabilnych struktur drugorzędowych mRNA w rejonie RBS', 'Obecność rzadkich kodonów bezpośrednio za AUG'],
+    correct: 2,
+    exp: 'Stabilna struktura drugorzędowa (hairpin, stem-loop) "zakrywa" sekwencję SD lub AUG → rybosomy nie mogą się przyłączyć → brak translacji. Prezentacja: "Wpływ drugorzędowej struktury transkryptu mRNA lacZ na wydajność inicjacji translacji".'
+  },
+  {
+    id:19, type:'mcq', topic:'restrykcja',
+    q: 'Które sekwencje będą oporne na trawienie enzymem ClaI (ATCGAT, wrażliwy na metylację Ade przez Dam) po izolacji z bakterii Dam⁺?',
+    a: 'Sekwencje A i D (zawierające nakładające się GATC)',
+    options: ['Tylko sekwencja A', 'Sekwencje B i C', 'Sekwencje A i D (zawierające nakładające się GATC)', 'Żadna z sekwencji'],
+    correct: 2,
+    exp: 'Dam metyluje adeninę w 5′-GATC-3′. ClaI nie tnie gdy A w ATCGAT jest zmetylowana. Sekwencje A i D zawierają GATC nakładające się na sekwencję ATCGAT → A zmetylowana → oporne na trawienie.'
+  },
+  {
+    id:20, type:'mcq', topic:'restrykcja',
+    q: 'Które enzymy o wielorakiej specyficzności generują końce nadające się do bezpośredniej ligacji?',
+    a: 'GACG/TC i GATA/TC (oba generują koniec 5′-TC)',
+    options: ['GATCG/A i GATCA/T', 'GCAA/TT i GCAA/CC', 'GACG/TC i GATA/TC (oba generują koniec 5′-TC)', 'AGTG/CA i AGAG/CT'],
+    correct: 2,
+    exp: 'Do ligacji konieczne są identyczne jednoniciowe końce. GACG/TC → koniec 5′-TC; GATA/TC → koniec 5′-TC — oba identyczne → kompatybilne. Por. BamHI/BglII/BstYI które wszystkie generują koniec 5′-GATC.'
+  },
+  {
+    id:22, type:'mcq', topic:'plazmidy',
+    q: 'Przynależność plazmidów do tej samej grupy niezgodności (Inc group) oznacza:',
+    a: 'Wzajemne wykluczanie się w komórkach bez presji selekcyjnej',
+    options: ['Wzajemne wykluczanie się w komórkach bez presji selekcyjnej', 'Brak możliwości jednoczesnego transferu koniugacyjnego', 'Identyczne sekwencje ori co powoduje rekombinację', 'Identyczne geny oporności'],
+    correct: 0,
+    exp: 'Plazmidy z tej samej grupy Inc konkurują o te same regulatory replikacji i miejsca podziału. Bez selekcji jeden jest losowo eliminowany. Prezentacja: "Zgodność i niezgodność — ta sama grupa niezgodności → utrzymanie możliwe tylko przy presji antybiotykowej (nietrwałe)".'
+  },
+  {
+    id:23, type:'mcq', topic:'metody',
+    q: 'Jakie szczepy E. coli są najczęściej używane do preparatów plazmidowych?',
+    a: 'endA⁻ — mutacja zapewnia niski poziom niespecyficznej nukleazy',
+    options: ['endA⁻ — mutacja zapewnia niski poziom niespecyficznej nukleazy', 'recA⁺ — rekombinaza zwiększa wydajność izolacji', 'polA⁻ — brak Pol I zwiększa stabilność plazmidów', 'dam⁻ dcm⁻ — brak metylacji poprawia cięcie enzymami'],
+    correct: 0,
+    exp: 'EndA (endonukleaza peryplazmatyczna) niespecyficznie degraduje dsDNA. Szczepy endA⁻ (DH5α, TOP10) dają DNA wyższej jakości. Prezentacja: "EndA (endA1)" + "endA a jakość materiału do sekwencjonowania".'
+  },
+  {
+    id:24, type:'mcq', topic:'transkrypcja',
+    q: 'Spontanicznych mutacji silniej obniżających "siłę" promotorów należy szukać:',
+    a: 'W sekwencjach -35 i -10 promotora',
+    options: ['W sekwencjach -35 i -10 promotora', 'W regionie operatora', 'W sekwencji Shine-Dalgarno', 'W elemencie UP (-40 do -60)'],
+    correct: 0,
+    exp: 'Sekwencje -10 (TATAAT) i -35 (TTGACA) są bezpośrednio rozpoznawane przez σ70. Mutacje w tych heksamerach najsilniej obniżają siłę promotora. Prezentacja: "mutacje promoter-down w heksamerach -10 lub -35 obniżają efektywność promotora".'
+  },
+  {
+    id:25, type:'mcq', topic:'transkrypcja',
+    q: 'Pojęcie polarności transkrypcji wiąże się ze:',
+    a: 'Przerwaniem transkrypcji genów operonu za mutacją nonsensowną w genie poprzedzającym',
+    options: ['Kierunkiem transkrypcji na nici matrycowej DNA', 'Przerwaniem transkrypcji genów operonu za mutacją nonsensowną w genie poprzedzającym', 'Zależnością ekspresji genów od orientacji promotora', 'Nierównomiernym stężeniem mRNA wzdłuż operonu'],
+    correct: 1,
+    exp: 'Polarność: mutacja nonsensowna → przedwczesna terminacja translacji → odsłonięty mRNA → Rho wnika i terminuje transkrypcję → geny downstream nie są transkrybowane. Prezentacja: "Terminatory Rho-zależne i polarność transkrypcji".'
+  },
+  {
+    id:26, type:'mcq', topic:'transkrypcja',
+    q: 'Która domena σ70 wiąże sekwencję -35?',
+    a: 'Domena 4.2',
+    options: ['Domena 1.1', 'Domena 2.4', 'Domena 3.0', 'Domena 4.2'],
+    correct: 3,
+    exp: 'Struktura domenowa σ70: domena 1.1 = autoinhibicja; domena 2.4 = wiąże sekwencję -10; domena 3.0 = wiąże extended -10; domena 4.2 = wiąże sekwencję -35. Prezentacja: "Struktura domenowa podjednostki σ70".'
+  },
+  {
+    id:27, type:'mcq', topic:'transkrypcja',
+    q: 'Który element rejonu promotorowego jest kluczowy w zjawisku ścisłej odpowiedzi komórkowej (stringent response)?',
+    a: 'Dyskryminator',
+    options: ['Dyskryminator', 'Sekwencja -35', 'Element UP', 'Sekwencja -10'],
+    correct: 0,
+    exp: 'Prezentacja potwierdza wprost: "Alarmon ppGpp wyłącza promotory o budowie dyskryminatora bogatej w pary GC w czasie komórkowej odpowiedzi ścisłej". Dyskryminator leży między -10 a +1 — w promotorach rRNA bogaty w GC.'
+  },
+  {
+    id:33, type:'mcq', topic:'transkrypcja',
+    q: 'Dotyczące systemu regulacji operonu araBAD — rola arabinozy:',
+    a: 'Arabinoza zmienia konformację AraC z represora na aktywator',
+    options: ['Arabinoza zmienia konformację AraC z represora na aktywator', 'Arabinoza bezpośrednio blokuje wiązanie AraC do DNA', 'Arabinoza aktywuje CAP-cAMP który zastępuje AraC', 'Arabinoza inaktywuje AraC, przez co promotor jest odhamowany'],
+    correct: 0,
+    exp: 'Bez arabinozy: AraC tworzy pętlę DNA (represor). Z arabinozy: zmiana konformacji → AraC wiąże araI1 i araI2 (aktywator). Prezentacja: "ParaBAD — Induktor: L-arabinoza; Inhibitor kompetycyjny: D-fukoza".'
+  },
+  {
+    id:36, type:'mcq', topic:'transkrypcja',
+    q: 'Regulacja operonów biosyntezy aminokwasów przez produkt końcowy szlaku — jaki typ regulacji?',
+    a: 'Negatywna — represyjna',
+    options: ['Pozytywna — indukcyjna', 'Negatywna — represyjna', 'Pozytywna — represyjna', 'Negatywna — indukcyjna'],
+    correct: 1,
+    exp: 'Regulacja negatywna represyjna: represor nieaktywny bez koreprymenta. Produkt końcowy (np. tryptofan) działa jako korepresor → aktywuje represor → wiąże operator → blokuje transkrypcję. Sprzężenie zwrotne ujemne.'
+  },
+  {
+    id:37, type:'mcq', topic:'transkrypcja',
+    q: 'Właściwe funkcjonowanie represora laktozowego wymaga dwóch operatorów, które muszą spełniać:',
+    a: 'Wszystkie z wymienionych cech (geometria, odległość, jakość sekwencji)',
+    options: ['Tylko odpowiednią geometrię wzajemnego położenia', 'Tylko właściwą odległość między operatorami', 'Tylko wystarczającą jakość sekwencji konsensusowej', 'Wszystkie z wymienionych cech (geometria, odległość, jakość sekwencji)'],
+    correct: 3,
+    exp: 'Represor LacI (tetramer) tworzy pętlę DNA wiążąc dwa operatory. Prezentacja: "Wydajność represji zależy od geometrii położenia i odległości operatorów" + tabela wartości represji. Wszystkie trzy czynniki są konieczne.'
+  },
+  {
+    id:38, type:'mcq', topic:'transkrypcja',
+    q: 'Białka biorące udział w "reaktywacji" pauzującej polimerazy RNA (elongacja transkrypcji):',
+    a: 'GreA i GreB',
+    options: ['NusA i NusG', 'DnaA i DnaB', 'NusB i NusE', 'GreA i GreB'],
+    correct: 3,
+    exp: 'Prezentacja: "GreA: 2-3 nt — ZAPOBIEGA aresztowi; GreB: 2-18 nt — ZNOSI zaistniały areszt. Stymulują cięcie mRNA na końcu 3′. Kontrola wierności transkrypcji." NusA spowalnia elongację. DnaA to białko inicjacji replikacji.'
+  },
+  {
+    id:39, type:'mcq', topic:'transkrypcja',
+    q: 'O Rho-niezależnym terminatorze w nici kodującej DNA świadczy:',
+    a: 'Dwa rejony bogate w GC + jeden rejon poli-T',
+    options: ['Jeden rejon bogaty w AT i jeden bogaty w GC', 'Dwa rejony bogate w GC i jeden bogaty w poli-T', 'Trzy rejony poli-A następujące po sobie', 'Sekwencja poli-G poprzedzona sekwencją poli-C'],
+    correct: 1,
+    exp: 'Terminator Rho-niezależny: dwie sekwencje GC-bogate (odwrócone powtórzenia) tworzą szpilkę na RNA + poli-U na końcu (= poli-T na nici kodującej). Szpilka destabilizuje hybryd RNA:DNA → dysocjacja polimerazy.'
+  },
+  {
+    id:40, type:'mcq', topic:'transkrypcja',
+    q: 'Właściwy mechanizm terminacji Rho-zależnej:',
+    a: 'Aktywność helikazowa białka Rho rozplata hybryd RNA:DNA',
+    options: ['Szpilka RNA blokuje polimerazę i destabilizuje hybryd RNA:DNA', 'Rho wiąże się do DNA i bezpośrednio blokuje polimerazę', 'Rho hydrolizuje mRNA uwalniając polimerazę', 'Aktywność helikazowa białka Rho rozplata hybryd RNA:DNA'],
+    correct: 3,
+    exp: 'Rho to heksameryczna helikaza RNA (ATP-zależna). Wiąże się do nagiego mRNA w miejscu rut, ściga polimerazę i gdy ta pauzuje, rozplata hybryd RNA:DNA. Opcja A opisuje terminator Rho-NIEZALEŻNY.'
+  },
+  {
+    id:41, type:'mcq', topic:'transkrypcja',
+    q: 'W skład degradosomu wchodzą:',
+    a: 'RNaza E, RhlB, PNPaza',
+    options: ['DNaza I, PNPaza, fosfataza alkaliczna', 'RNaza E, RhlB, PNPaza', 'Rho, NusA, NusG', 'RNaza H, RNaza III, PNPaza'],
+    correct: 1,
+    exp: 'Degradosom: RNaza E (scaffold), RhlB (helikaza DEAD-box), PNPaza (egzonukleaza). Wg prezentacji: "Egzonukleazy: RNazaII (90%), PNPaza (10%); Endonukleazy: RNazaE (ss), RNazaIII (ds)".'
+  },
+  {
+    id:42, type:'mcq', topic:'transkrypcja',
+    q: 'Rejony promotorowe bogate w pary AT:',
+    a: '-10, łącznik, UP',
+    options: ['-10, łącznik, UP', '-35, dyskryminator, -10', '-35, -10, operator', 'UP, -35, dyskryminator'],
+    correct: 0,
+    exp: 'Prezentacja: "Obecność par A/T w łączniku zwiększa efektywność promotora" + "Rejon promotorowy jest bogaty w pary A+T". Sekwencja -10 (TATAAT), łącznik i UP są AT-bogate. Dyskryminator w silnych promotorach rRNA jest GC-bogaty!'
+  },
+  {
+    id:44, type:'mcq', topic:'transkrypcja',
+    q: 'Jeśli represor wiąże się najefektywniej do operatora nr 1, to:',
+    a: 'Ekspresja uruchamiana jest tylko przy dużym stężeniu induktora',
+    options: ['Ekspresja uruchamiana jest tylko przy dużym stężeniu induktora', 'Ekspresja uruchamiana jest już przy małym stężeniu induktora', 'Gen nie może być indukowany', 'Ekspresja jest konstytutywna (represja nieszczelna)'],
+    correct: 0,
+    exp: 'Im silniejsze wiązanie represora, tym wyższe stężenie induktora potrzebne do jego oderwania. Prezentacja: "sulA: wiązanie LexA najsilniejsze (promotor dobrze represjonowany); uvrD: wiązanie LexA najsłabsze (promotor przeciekający)".'
+  },
+  {
+    id:45, type:'mcq', topic:'wektory',
+    q: 'Absolutne minimum wektorów opartych na elementach bakteriofaga T7:',
+    a: 'Specyficzny promotor rozpoznawany tylko przez polimerazę RNA T7',
+    options: ['Specyficzny promotor rozpoznawany tylko przez polimerazę RNA T7', 'Terminator T7 i specyficzny promotor', 'Specyficzny RBS i promotor T7', 'Gen polimerazy T7 zintegrowany w chromosomie'],
+    correct: 0,
+    exp: 'System T7 (np. pET): promotor T7 (φ10) rozpoznawany wyłącznie przez polimerazę T7 — to absolutne minimum. Polimeraza T7 dostarczona przez szczep (np. BL21(DE3) z lacUV5::T7 RNAP). Terminator i RBS zwiększają wydajność, ale nie są niezbędne.'
+  },
+  {
+    id:47, type:'mcq', topic:'plazmidy',
+    q: 'Trwały hybryd RNAII/DNA w replikacji ColE1 jest możliwy dzięki:',
+    a: 'Białku Rop/Rom stabilizującemu kissing complex RNAI/RNAII',
+    options: ['Bezpośredniemu wiązaniu RNazy H do RNAII', 'Białku Rop/Rom stabilizującemu kissing complex RNAI/RNAII', 'Inaktywacji polimerazy I w miejscu ori', 'Niedoborowi RNazy H w warunkach szybkiego wzrostu'],
+    correct: 1,
+    exp: 'Rop/Rom stabilizuje interakcję kissing complex między RNA I (inhibitorem) a RNA II (preprimerem) → moduluje liczbę kopii. Prezentacja: "ColE1 NEGATYWNE REGULATORY REPLIKACJI — Rop+ efekt 2-3x".'
+  },
+  {
+    id:48, type:'mcq', topic:'wektory',
+    q: 'Promotory specyficznie indukowalne laktozą lub IPTG:',
+    a: 'lacUV5L8, tac, trc',
+    options: ['trp, lambda pL, lacUV5', 'lacUV5L8, tac, trc', 'araBAD, T7φ10, trc', 'tac, phoA, rhaBAD'],
+    correct: 1,
+    exp: 'lacUV5L8: zmutowany lac, niezależny od CAP, indukowalny IPTG. tac: hybryda (-35 z trp, -10 z lac), indukowalny IPTG. trc: podobny do tac, indukowalny IPTG. Prezentacja: "Promotory typu lac — lacUV5L8, 16/17nt".'
+  },
+  {
+    id:49, type:'mcq', topic:'translacja',
+    q: 'Przy niedoborze tryptofanu — rola rzadkich kodonów Trp w liderowym mRNA operonu trp:',
+    a: 'Miejsce pauzy dla rybosomów → antyterminacja → transkrypcja kontynuowana',
+    options: ['Miejsca szybkiej translacji zwiększające syntezę peptydu lidera', 'Sygnały degradacji mRNA przez RNazę E', 'Miejsce pauzy dla rybosomów → antyterminacja → transkrypcja kontynuowana', 'Miejsca wiązania czynnika rho'],
+    correct: 2,
+    exp: 'Atenuacja: przy niedoborze Trp → mało tRNA^Trp → rybosom pauzuje na kodonach UGG → mRNA tworzy strukturę antyterminatora (2:3) → transkrypcja kontynuowana do trpE. Prezentacja: "Tempo translacji → (+) antyterminacja → transkrypcja trpE".'
+  },
+  {
+    id:50, type:'mcq', topic:'translacja',
+    q: 'Rybosomy E. coli pokrywają obszar RBS rozciągający się:',
+    a: 'Od -20 do +15 (względem startu translacji +1)',
+    options: ['Od -30 do +5 (względem startu transkrypcji)', 'Od -20 do +15 (względem startu translacji +1)', 'Od -10 do +30 (względem startu translacji +1)', 'Od -5 do +10 (względem kodonu stop)'],
+    correct: 1,
+    exp: 'RBS definiowany względem AUG (+1). Rybosom chroni fragment ~-20 do +15, obejmujący: sekwencję SD (~-10 do -5), spacer SD-AUG, sam AUG i kilka kodonów downstream. Footprint rybosomu to ~30 nt.'
+  },
+  // OPEN QUESTIONS
+  {
+    id:51, type:'open', topic:'restrykcja',
+    q: 'Co to są neoschizomery?',
+    a: 'Enzymy rozpoznające tę samą sekwencję, ale tnące ją w innym miejscu (generują różne końce)',
+    options: null,
+    exp: 'Neoschizomery rozpoznają identyczną sekwencję DNA co inny enzym, ale tną w INNYM miejscu → różne rodzaje końców. Przykład: SmaI (CCC/GGG → tępe) vs XmaI (C/CCGGG → lepkie 5′-CCGG). Neoschizomery NIE są kompatybilne do bezpośredniej ligacji. Prezentacja: "Uniemożliwia to lączenie (ligację) końców".'
+  },
+  {
+    id:52, type:'open', topic:'wektory',
+    q: 'Co to jest wektor wahadłowy?',
+    a: 'Wektor z dwoma ori dla ewolucyjnie odległych organizmów (np. E. coli + drożdże)',
+    options: null,
+    exp: 'Shuttle vector ma dwa niezależne ori dla ewolucyjnie odległych organizmów (np. E. coli + drożdże, ssaki, rośliny). Namnażany w E. coli, testowany funkcjonalnie w organizmie docelowym. Różnica od BHR: BHR ma jeden ori działający w wielu bakteriach (nie w ewolucyjnie odległych organizmach).'
+  },
+  {
+    id:53, type:'open', topic:'metody',
+    q: 'Gyraza i topoizomerazy — opisz rodzaje i funkcje.',
+    a: 'Gyraza: Topo II prokariotyczna, wprowadza ujemne superskrety (ATP). Topo I: tnie jedną nić, nie wymaga ATP. Topo II: tnie obie nici, wymaga ATP, usuwa katenaty.',
+    options: null,
+    exp: 'Gyraza: topoizomeraza II specyficzna dla prokaryotów, wprowadza ujemne superskrety, cel fluorochinolonów. Topo I: tnie jedną nić, usuwa superskrety przez rotację, bez ATP. Topo II: tnie obie nici, przepuszcza dupleks, religatuje, ±2 superskrety, usuwa katenaty i węzły. Kluczowa rola: rozplatanie DNA przed replikacją i transkrypcją.'
+  },
+  {
+    id:54, type:'open', topic:'transkrypcja',
+    q: 'Opisz skręty DNA w kompleksie transkrypcyjnym.',
+    a: 'Przed polimerazą: pozytywne superskrety. Za polimerazą: negatywne superskrety.',
+    options: null,
+    exp: 'Ruchoma polimeraza RNA tworzy falę topologiczną: PRZED polimerazą (upstream) DNA jest POZYTYWNIE superskrecone (polimeraza "nakręca" heliksę rozwijając ją). ZA polimerazą (downstream) DNA jest NEGATYWNIE superskrecone. Napięcia rozładowywane przez topoizomerazy (Topo I za, gyraza przed polimerazą).'
+  },
+  {
+    id:55, type:'open', topic:'metody',
+    q: 'Co potrzeba do PCR?',
+    a: 'Matryca DNA, startery (forward+reverse), dNTPs, termostabilna polimeraza, bufor z Mg²⁺, termocykler',
+    options: null,
+    exp: 'Składniki PCR: (1) matrycowe DNA, (2) startery komplementarne do obu nici, (3) dNTPs (dATP, dCTP, dGTP, dTTP), (4) termostabilna polimeraza (Taq, Pfu, Phusion), (5) bufor z Mg²⁺, (6) termocykler. Cykl: denaturacja (94°C) → annealing (50-65°C) → elongacja (72°C).'
+  },
+  {
+    id:56, type:'open', topic:'transkrypcja',
+    q: 'Modulatory HU i H-NS — opisz funkcje.',
+    a: 'HU: białko nukleoidowe, wspomaga inicjację replikacji (oriC). H-NS: globalny represor transkrypcji, wiąże AT-bogate DNA, kompaktyzuje nukleoid.',
+    options: null,
+    exp: 'HU: histonopodobne białko nukleoidowe, asystuje DnaA przy rozplataniu oriC, utrzymuje superskrety, moduluje wiązanie IHF i FIS. H-NS: wiąże DNA AT-bogate i zakrzywione, globalny represor transkrypcji ("zamraża" DNA), reguluje geny wirulencji i odpowiedzi na temperaturę, tworzy mosty między odległymi fragmentami DNA.'
+  },
+  {
+    id:57, type:'open', topic:'metody',
+    q: 'Katenaty — jaka to forma DNA?',
+    a: 'Dwie lub więcej cząsteczek DNA splecionych jak ogniwa łańcucha (bez wiązania kowalencyjnego)',
+    options: null,
+    exp: 'Katenaty powstają jako produkt replikacji gdy dwie potomne cząsteczki DNA są ze sobą splecione (brak wystarczającej aktywności Topo IV). Widoczne w żelu jako odrębne prążki (katenat dupleks, tripleks). Rozplatane przez topoizomerazy typu II (Topo IV u bakterii). Prezentacja pokazuje formy: CCC monomer, katenat dupleks, katenat tripleks.'
+  },
+  {
+    id:58, type:'open', topic:'wektory',
+    q: 'Kolor kolonii po alfa-komplementacji (blue-white screening) — interpretacja.',
+    a: 'Białe = insert obecny (brak alfa-komplementacji). Niebieskie = pusty wektor (aktywna β-galaktozydaza).',
+    options: null,
+    exp: 'BIAŁE kolonie: insert przerywa lacZα → brak alfa-komplementacji → brak β-galaktozydazy → brak hydrolizy X-Gal → białe (poszukiwane rekombinanty!). NIEBIESKIE kolonie: pusty wektor → lacZα nienaruszony → aktywna β-galaktozydaza → hydrolizuje X-Gal → niebieski produkt. Wymaga IPTG i X-Gal na płytce.'
+  },
+  {
+    id:59, type:'open', topic:'metody',
+    q: 'BSA — co to jest i do czego służy w biologii molekularnej?',
+    a: 'Surowicza albumina bydlęca — stabilizuje enzymy restrykcyjne, blokuje powierzchnie w Western/ELISA, standard stężenia białek.',
+    options: null,
+    exp: 'BSA (Bovine Serum Albumin): neutralne białko bez aktywności enzymatycznej. Zastosowania: (1) stabilizacja enzymów restrykcyjnych przy rozcieńczeniu (kluczowe! prezentacja: "Stosuj BSA!"), (2) blokowanie niespecyficznych wiązań w Western Blot i ELISA, (3) standard w pomiarach stężenia białek (Bradford/BCA), (4) składnik pożywek hodowlanych.'
+  },
+  {
+    id:60, type:'open', topic:'restrykcja',
+    q: 'Co umożliwiają enzymy restrykcyjne klasy III? Jak tną?',
+    a: 'Rozpoznają sekwencję asymetryczną, tną ~25-27 nt dalej od miejsca rozpoznania. Wymagają ATP i Mg²⁺.',
+    options: null,
+    exp: 'Enzymy klasy III (np. EcoPI): rozpoznają sekwencję asymetryczną ~5-6 nt, tną w określonej odległości ~25-27 nt downstream — miejsce cięcia INNE niż rozpoznania. Wymagają ATP (translokacja) i Mg²⁺. Porównanie: Klasa I — tnie daleko od rozpoznania (nieprzewidywalnie); Klasa II — tnie w miejscu rozpoznania, tylko Mg²⁺; Klasa III — tnie ~25-27 nt dalej, ATP+Mg²⁺.'
+  },
+  {
+    id:63, type:'open', topic:'metody',
+    q: 'Do czego służy alkaliczna fosfataza?',
+    a: '(1) Detekcja białek w Western/ELISA. (2) Defosforylacja wektora przed ligacją (zapobiega autoligacji).',
+    options: null,
+    exp: 'Dwa główne zastosowania: (1) DETEKCJA: sprzężona z przeciwciałem wtórnym, hydrolizuje BCIP/NBT → ciemny osad (Western Blot) lub PNPP → żółty (ELISA). (2) KLONOWANIE: defosforylacja 5′-końców linearyzowanego wektora (CIP/SAP treatment) → brak wolnych 5′-P → autoligacja niemożliwa → wzrost wydajności klonowania. Prezentacja: schemat z zapobiegnięciem autoligacji.'
+  },
+  {
+    id:64, type:'open', topic:'translacja',
+    q: 'Po co ogonki poli(A)?',
+    a: 'Ochrona mRNA przed degradacją, zwiększenie wydajności translacji, eksport z jądra (eukaryota). U bakterii: destabilizacja RNA!',
+    options: null,
+    exp: 'U eukaryotów: (1) ochrona przed egzonukleazami 3′→5′, (2) interakcja PABP-eIF4G zwiększa wydajność translacji, (3) ułatwia eksport z jądra. U BAKTERII (paradoks!): poliadenylowanie przez PcnB DESTABILIZUJE RNA (ułatwia degradację przez PNPazę). Prezentacja: "Polimerazy poliadenylowe: PcnB (PAPI — 90%), PAPII" + rola pcnB w destabilizacji RNA I.'
+  },
+  {
+    id:65, type:'open', topic:'restrykcja',
+    q: 'Opisz wpływ aktywności metylotransferazy na cięcie restryktazami.',
+    a: 'Dam metyluje Ade w GATC, Dcm metyluje Cyt w CC(A/T)GG. Niektóre enzymy są wrażliwe na metylację i nie tną zmetylowanego DNA.',
+    options: null,
+    exp: 'Dam (m6A w 5′-GATC-3′): enzymy wrażliwe (nie tną): ClaI, MboI, XbaI, BclI. Enzymy niewrażliwe (tną): BamHI, BglII, Sau3AI. Dcm (m5C w CC(A/T)GG): wrażliwe: AvaII, EcoRII. W praktyce: DNA z dam⁺ dcm⁺ E. coli może być oporne na cięcie → użyć szczepów dam⁻ dcm⁻. Typ IV (McrBC, Mrr): tną DNA ZMETYLOWANE.'
+  },
+  {
+    id:66, type:'open', topic:'plazmidy',
+    q: 'RecA i struktura "głowa do głowy" — opisz.',
+    a: 'RecA: kluczowe białko rekombinacji homologicznej i odpowiedzi SOS. Struktura głowa-do-głowy = palindrom (inverted repeats), niestabilny w E. coli WT.',
+    options: null,
+    exp: 'RecA: tworzy nukleofilament na ssDNA, katalizuje inwazję nici, aktywuje odpowiedź SOS (autoproteoliza LexA). Fenotypy recA⁻ wg prezentacji: ~50% komórek nie przeżywa każdego etapu wzrostu, ~10% bezchromosomowych, asynchroniczny podział (1-8 chromosomów). Struktura głowa-do-głowy = odwrócone powtórzenia (palindrom) — w E. coli WT palindromy >30-40 pz są niestabilne (degradacja przez RecBCD).'
+  },
+  {
+    id:67, type:'open', topic:'restrykcja',
+    q: 'System RM — tnie DNA zmetylowane, niemetylowane czy oba?',
+    a: 'Klasy I, II, III: tną niemetylowane (obce). Klasa IV (McrA, McrBC, Mrr): tnie zmetylowane.',
+    options: null,
+    exp: 'Klasyczne systemy RM (klasy I, II, III): rozpoznają i tną DNA NIEMETYLOWANE (obce). Własne DNA zmetylowane → chronione. WYJĄTEK — Typ IV (McrA, McrBC, Mrr): tną DNA ZMETYLOWANE — druga linia obrony. Prezentacja: "Restryktazy metylazozależne Mcr i Mrr → metylowany DNA → Typ IV". Praktyczne znaczenie: DNA z m5C może być degradowane przez McrBC przy transformacji.'
+  },
+  {
+    id:68, type:'open', topic:'wektory',
+    q: 'Który plazmid może replikować się w wielu różnych gospodarzach?',
+    a: 'Plazmidy o szerokim zakresie gospodarzy (BHR), np. RK2 (= RP4) — działa w Gram-ujemnych (E. coli, Pseudomonas, Agrobacterium).',
+    options: null,
+    exp: 'Plazmidy BHR (broad host range) mają jeden ori działający w wielu bakteriach. RK2 (RP4, RP1): zakres = Gram-ujemne (E. coli, Pseudomonas, Agrobacterium, Salmonella). Prezentacja: "Broad host range T7 system — Pseudomonas aeruginosa, Erwinia, Salmonella, Agrobacterium, Chromobacterium".'
+  },
+  {
+    id:69, type:'open', topic:'wektory',
+    q: 'Plazmid samobójczy — co to jest i jak działa?',
+    a: 'Nie może replikować się autonomicznie u gospodarza. Integruje do chromosomu przez rekombinację lub transpozycję. Zastosowanie: knockout genów.',
+    options: null,
+    exp: 'Suicide vector nie ma kompatybilnego ori u docelowego gospodarza → nie replikuje się autonomicznie → selekcja na integrację do chromosomu. Mechanizmy integracji: rekombinacja homologiczna (z sekwencją homologiczną chromosomową, RecA-zależna), miejscowo-specyficzna (Cre/lox), transpozycja. Warianty: termoczułe ori (replikuje przy 30°C, nie przy 37°C). Zastosowania: nokautowanie genów, mutageneza insercyjna.'
+  },
+  {
+    id:70, type:'open', topic:'metody',
+    q: 'Białka DEAD-box — co to jest?',
+    a: 'Rodzina helikaz RNA nazwana od motywu Asp-Glu-Ala-Asp (DEAD). Rozplatają struktury RNA zużywając ATP.',
+    options: null,
+    exp: 'Białka DEAD-box: helikazy RNA/DNA z konserwatywnym motywem DEAD (Asp-Glu-Ala-Asp) w domenie ATPazowej. 9 konserwatywnych motywów. Funkcje: inicjacja translacji (eIF4A), splicing, biogeneza rybosomów, degradacja RNA (RhlB w degradosomie E. coli!), odpowiedź na stres termiczny. Mechanizm: RNA-zależna ATPaza + helikaza rozplatająca struktury drugorzędowe RNA.'
+  },
+  {
+    id:71, type:'open', topic:'transkrypcja',
+    q: 'Cistron, operon, regulon — definicje.',
+    a: 'Cistron = gen strukturalny (jeden polipeptyd). Operon = promotor + operator + geny + terminator (jeden transkrypt). Regulon = wiele operonów pod jednym regulatorem.',
+    options: null,
+    exp: 'CISTRON: jednostka genetyczna kodująca jeden łańcuch polipeptydowy (od testu cis-trans Benzera). OPERON: jednostka transkrypcyjna — promotor, operator, geny strukturalne (cisstrony), terminator. Wspólna transkrypcja do jednego polistrukturalnego mRNA. REGULON: zestaw operonów/genów regulowanych przez jeden czynnik transkrypcyjny (represor/aktywator), np. regulon SOS (LexA/RecA), regulon CRP/CAP.'
+  },
+  {
+    id:72, type:'open', topic:'metody',
+    q: 'Odwrotna reakcja PCR (RT-PCR) — opisz metodę i zastosowania.',
+    a: 'Etap 1: RNA → cDNA (odwrotna transkryptaza). Etap 2: amplifikacja cDNA przez PCR. Zastosowania: ekspresja genów, wirusy RNA, klonowanie cDNA.',
+    options: null,
+    exp: 'RT-PCR: (1) Odwrotna transkrypcja — RNA + odwrotna transkryptaza (MMLV-RT, AMV-RT) + starter (oligo-dT lub random hexamers) → cDNA. (2) PCR — amplifikacja cDNA standardową polimerazą. Zastosowania: analiza ekspresji genów, wirusy RNA (HIV, SARS-CoV-2), klonowanie cDNA (bez intronów!), qRT-PCR (ilościowy). Zaleta: cDNA nie zawiera intronów → ekspresja w bakteriach możliwa.'
+  },
+];
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let currentMode = 'flashcard';
+let currentFilter = 'all';
+let filteredQuestions = [...questions];
+let flashIdx = 0;
+let isFlipped = false;
+let studied = new Set();
+let ratings = {};
+
+// Quiz state
+let quizQuestions = [];
+let quizIdx = 0;
+let quizCorrect = 0;
+let quizIncorrect = 0;
+let quizAnswered = false;
+
+// ─── FILTER ───────────────────────────────────────────────────────────────────
+function setFilter(filter, btn) {
+  currentFilter = filter;
+  document.querySelectorAll('.tag').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  applyFilter();
+}
+
+function applyFilter() {
+  if (currentFilter === 'all') filteredQuestions = [...questions];
+  else if (currentFilter === 'open') filteredQuestions = questions.filter(q => q.type === 'open');
+  else filteredQuestions = questions.filter(q => q.topic === currentFilter);
+  flashIdx = 0;
+  isFlipped = false;
+  if (currentMode === 'flashcard') renderFlashcard();
+  else if (currentMode === 'quiz') startQuiz();
+  else if (currentMode === 'browse') renderBrowse();
+}
+
+// ─── MODE ─────────────────────────────────────────────────────────────────────
+function setMode(mode) {
+  currentMode = mode;
+  document.querySelectorAll('.mode-btn').forEach((b, i) => {
+    b.classList.toggle('active', ['flashcard','quiz','browse'][i] === mode);
+  });
+  document.getElementById('flashcardMode').style.display = mode === 'flashcard' ? 'block' : 'none';
+  document.getElementById('quizMode').style.display = mode === 'quiz' ? 'block' : 'none';
+  document.getElementById('browseMode').style.display = mode === 'browse' ? 'block' : 'none';
+  if (mode === 'quiz') startQuiz();
+  else if (mode === 'browse') renderBrowse();
+  else { flashIdx = 0; isFlipped = false; renderFlashcard(); }
+}
+
+// ─── FLASHCARD ────────────────────────────────────────────────────────────────
+function renderFlashcard() {
+  if (!filteredQuestions.length) return;
+  const q = filteredQuestions[flashIdx];
+  const card = document.getElementById('flashcard');
+  card.classList.remove('flipped');
+  isFlipped = false;
+  document.getElementById('ratingBtns').style.display = 'none';
+
+  const pct = ((flashIdx + 1) / filteredQuestions.length) * 100;
+  document.getElementById('flashProgress').style.width = pct + '%';
+
+  document.getElementById('cardNum').textContent = `PYTANIE ${String(q.id).padStart(2,'0')} / ${filteredQuestions.length}`;
+  document.getElementById('cardNumBack').textContent = `PYTANIE ${String(q.id).padStart(2,'0')} / ${filteredQuestions.length}`;
+  document.getElementById('progressText').textContent = `${flashIdx+1} / ${filteredQuestions.length}`;
+
+  const typeTag = document.getElementById('cardTypeTag');
+  typeTag.textContent = q.type === 'mcq' ? 'MCQ' : 'PYTANIE OTWARTE';
+  typeTag.className = `card-tag ${q.type}`;
+
+  document.getElementById('cardQuestion').textContent = q.q;
+  document.getElementById('cardAnswer').textContent = q.a;
+  document.getElementById('cardExplanation').textContent = q.exp;
+
+  document.getElementById('prevBtn').disabled = flashIdx === 0;
+  document.getElementById('nextBtn').disabled = flashIdx === filteredQuestions.length - 1;
+
+  updateStats();
+}
+
+function flipCard() {
+  isFlipped = !isFlipped;
+  document.getElementById('flashcard').classList.toggle('flipped', isFlipped);
+  if (isFlipped) {
+    document.getElementById('ratingBtns').style.display = 'grid';
+    studied.add(filteredQuestions[flashIdx].id);
+    updateStats();
+  } else {
+    document.getElementById('ratingBtns').style.display = 'none';
+  }
+}
+
+function nextCard() {
+  if (flashIdx < filteredQuestions.length - 1) {
+    flashIdx++;
+    renderFlashcard();
+  }
+}
+
+function prevCard() {
+  if (flashIdx > 0) {
+    flashIdx--;
+    renderFlashcard();
+  }
+}
+
+function rateCard(rating) {
+  const q = filteredQuestions[flashIdx];
+  ratings[q.id] = rating;
+  if (flashIdx < filteredQuestions.length - 1) {
+    flashIdx++;
+    renderFlashcard();
+  }
+}
+
+// ─── QUIZ ─────────────────────────────────────────────────────────────────────
+function startQuiz() {
+  document.getElementById('resultsScreen').classList.remove('show');
+  document.getElementById('quizContainer').style.display = 'block';
+
+  const mcqOnly = filteredQuestions.filter(q => q.type === 'mcq' && q.options);
+  quizQuestions = shuffle([...mcqOnly]).slice(0, Math.min(15, mcqOnly.length));
+  quizIdx = 0; quizCorrect = 0; quizIncorrect = 0;
+  renderQuizQuestion();
+}
+
+function renderQuizQuestion() {
+  if (quizIdx >= quizQuestions.length) { showResults(); return; }
+  const q = quizQuestions[quizIdx];
+  quizAnswered = false;
+
+  const pct = (quizIdx / quizQuestions.length) * 100;
+  document.getElementById('quizProgress').style.width = pct + '%';
+  document.getElementById('quizNum').textContent = `PYTANIE ${quizIdx+1} / ${quizQuestions.length}`;
+  document.getElementById('quizQuestion').textContent = q.q;
+
+  const grid = document.getElementById('optionsGrid');
+  grid.innerHTML = '';
+  const letters = ['A','B','C','D'];
+  q.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.innerHTML = `<span class="option-letter">${letters[i]}</span>${opt}`;
+    btn.onclick = () => selectAnswer(i, q);
+    grid.appendChild(btn);
+  });
+
+  document.getElementById('quizExplanation').className = 'quiz-explanation';
+  document.getElementById('nextQuizBtn').className = 'next-btn';
+}
+
+function selectAnswer(idx, q) {
+  if (quizAnswered) return;
+  quizAnswered = true;
+  const btns = document.querySelectorAll('.option-btn');
+
+  btns.forEach((btn, i) => {
+    btn.disabled = true;
+    if (i === q.correct) btn.classList.add('correct');
+    else if (i === idx && idx !== q.correct) btn.classList.add('incorrect');
+  });
+
+  if (idx === q.correct) quizCorrect++;
+  else quizIncorrect++;
+
+  const expEl = document.getElementById('quizExplanation');
+  expEl.innerHTML = `<strong>${idx === q.correct ? '✓ Poprawnie!' : '✗ Błędna odpowiedź.'}</strong> ${q.exp}`;
+  expEl.className = 'quiz-explanation show';
+
+  document.getElementById('nextQuizBtn').className = 'next-btn show';
+  updateStats();
+}
+
+function nextQuizQuestion() {
+  quizIdx++;
+  renderQuizQuestion();
+}
+
+function showResults() {
+  document.getElementById('quizContainer').style.display = 'none';
+  const screen = document.getElementById('resultsScreen');
+  screen.classList.add('show');
+  const total = quizCorrect + quizIncorrect;
+  const pct = total ? Math.round((quizCorrect / total) * 100) : 0;
+  document.getElementById('resultsScore').textContent = pct + '%';
+  document.getElementById('correctCount').textContent = quizCorrect;
+  document.getElementById('incorrectCount').textContent = quizIncorrect;
+  document.getElementById('quizTotal').textContent = quizQuestions.length;
+  document.getElementById('quizScore').textContent = pct + '%';
+}
+
+// ─── BROWSE ───────────────────────────────────────────────────────────────────
+function renderBrowse(searchText = '') {
+  const grid = document.getElementById('browseGrid');
+  grid.innerHTML = '';
+  const search = searchText.toLowerCase();
+  const toShow = filteredQuestions.filter(q =>
+    !search || q.q.toLowerCase().includes(search) || q.a.toLowerCase().includes(search) || q.exp.toLowerCase().includes(search)
+  );
+  toShow.forEach(q => {
+    const item = document.createElement('div');
+    item.className = 'browse-item';
+    item.innerHTML = `
+      <div class="browse-header" onclick="toggleBrowse(this)">
+        <span class="browse-num">Pyt. ${q.id}</span>
+        <span class="browse-q">${q.q}</span>
+        <span class="browse-toggle">▼</span>
+      </div>
+      <div class="browse-body">
+        <div class="browse-answer">✓ ${q.a}</div>
+        <div class="browse-explanation">${q.exp}</div>
+      </div>`;
+    grid.appendChild(item);
+  });
+  if (!toShow.length) {
+    grid.innerHTML = '<div style="color:var(--muted);text-align:center;padding:40px;font-family:Space Mono,monospace;font-size:13px;">Brak wyników</div>';
+  }
+}
+
+function toggleBrowse(header) {
+  const item = header.parentElement;
+  item.classList.toggle('open');
+}
+
+function filterBrowse(text) {
+  renderBrowse(text);
+}
+
+// ─── UTILS ────────────────────────────────────────────────────────────────────
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function updateStats() {
+  document.getElementById('studiedCount').textContent = studied.size;
+  document.getElementById('totalCount').textContent = filteredQuestions.length;
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+renderFlashcard();
+</script>
+</body>
+</html>
